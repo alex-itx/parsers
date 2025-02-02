@@ -1,0 +1,88 @@
+"""
+кс бот
+"""
+
+import json
+import time
+from aiogram import Bot, Dispatcher, executor, types
+from aiogram.dispatcher.filters import Text
+from main import collect_data
+from aiogram.utils.markdown import hbold, hlink
+
+token = '[тут должен быть токен]'
+# создаем бота
+bot = Bot(token=token, parse_mode=types.ParseMode.HTML)
+
+# создаем объект диспетчера
+dp = Dispatcher(bot)
+
+# создаем функцию "старт"
+@dp.message_handler(commands='start')
+async def start(message: types.Message):
+    # список кнопок (работать будет только первая)
+    start_button = ['🥄ножи', 'штурмовые винтовки']
+    # создаем объект клавиатуры
+    keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
+    # добавляем кнопки в клавиатуру
+    keyboard.add(*start_button)
+    # отправляем сообщение и подрубаем клавиатуру
+    await message.answer('выберите категорию', reply_markup=keyboard)
+
+# создаем функцию ответа на нажатие кнопки с ножами
+@dp.message_handler(Text(equals='🥄ножи'))
+async def knife(message: types.Message):
+    await message.answer('жди пока...')
+
+    # запускаем скрипт
+    collect_data()
+
+    # читаем файл с карточками
+    with open('result.json', encoding='utf-8') as file:
+        data = json.load(file)
+
+    # пробегаем по всем карточкам
+    for index, item in enumerate(data):
+        # формируем карточку, чтобы отправить ее сообщением
+        card = f'{hlink(item.get("name"), item.get("url"))}\n'\
+               f'{hbold("скидка: ")}{item.get("overprice")}%\n'\
+               f'{hbold("цена: ")}${item.get("price")}🔥'
+
+        # пауза чтобы не получить бан если будем закидывать слишком много карточек
+        if index % 20 == 0:
+            time.sleep(3)
+
+        # отправляем карточку
+        await message.answer(card)
+
+
+# функция для вывода штурмовых винтовок
+@dp.message_handler(Text(equals='штурмовые винтовки'))
+async def assault_rifle(message: types.Message):
+    await message.answer('жди пока...')
+
+    # запускаем скрипт
+    collect_data(card_type=3)
+
+    # читаем файл с карточками
+    with open('result.json', encoding='utf-8') as file:
+        data = json.load(file)
+
+    # пробегаем по всем карточкам
+    for index, item in enumerate(data):
+        # формируем карточку, чтобы отправить ее сообщением
+        card = f'{hlink(item.get("name"), item.get("url"))}\n'\
+               f'{hbold("скидка: ")}{item.get("overprice")}%\n'\
+               f'{hbold("цена: ")}${item.get("price")}🔥'
+
+        # пауза чтобы не получить бан если будем закидывать слишком много карточек
+        if index % 20 == 0:
+            time.sleep(3)
+
+        # отправляем карточку
+        await message.answer(card)
+
+def main():
+    executor.start_polling(dp)
+
+if __name__ == '__main__':
+    main()
